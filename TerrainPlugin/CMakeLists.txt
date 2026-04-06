@@ -35,9 +35,16 @@ target_link_libraries(TerrainPlugin
 )
 
 # Copy the built plugin into build/resources/plugins/ so the engine finds it.
+# Remove any other config variant first (e.g. TerrainPlugin.so vs TerrainPlugin_d.so)
+# so only the currently-built variant is present and the engine doesn't load duplicates.
 add_custom_command(TARGET TerrainPlugin POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
         "${CMAKE_BINARY_DIR}/resources/plugins"
+    COMMAND ${CMAKE_COMMAND} -E rm -f
+        "${CMAKE_BINARY_DIR}/resources/plugins/TerrainPlugin.so"
+        "${CMAKE_BINARY_DIR}/resources/plugins/TerrainPlugin_d.so"
+        "${CMAKE_BINARY_DIR}/resources/plugins/TerrainPlugin.dll"
+        "${CMAKE_BINARY_DIR}/resources/plugins/TerrainPlugin_d.dll"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:TerrainPlugin>"
         "${CMAKE_BINARY_DIR}/resources/plugins/$<TARGET_FILE_NAME:TerrainPlugin>"

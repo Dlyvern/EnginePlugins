@@ -1,0 +1,118 @@
+name: Build Plugins
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build plugins (Linux)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout EnginePlugins
+        uses: actions/checkout@v4
+        with:
+          path: EnginePlugins
+
+      # Build inside the full Velix tree — plugins need engine headers & deps.
+      - name: Checkout Velix engine
+        uses: actions/checkout@v4
+        with:
+          repository: Dlyvern/Velix
+          path: Velix
+          submodules: recursive
+
+      - name: Symlink EnginePlugins into Velix source tree
+        run: |
+          ln -sfn ${{ github.workspace }}/EnginePlugins \
+            ${{ github.workspace }}/Velix/resources/plugins/EnginePlugins
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            cmake make \
+            libvulkan-dev \
+            libx11-dev libxext-dev libsm-dev libice-dev \
+            liblz4-dev \
+            libgl1-mesa-dev
+
+      - name: Configure
+        working-directory: Velix
+        run: |
+          cmake -B build \
+            -G "Unix Makefiles" \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build TerrainPlugin
+        working-directory: Velix
+        run: make -C build TerrainPlugin -j$(nproc)
+
+      - name: Collect built plugins
+        run: |
+          mkdir -p artifacts
+          cp Velix/build/resources/plugins/EnginePlugins/TerrainPlugin/TerrainPlugin.so artifacts/
+          echo "Built plugins:"
+          ls -la artifacts/
+
+      - name: Determine version tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update manifest.json
+        run: |
+          TAG=${{ steps.version.outputs.tag }}
+          BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+          python3 - <<'EOF'
+          import json, os
+
+          tag = os.environ["TAG"]
+          base_url = os.environ["BASE_URL"]
+
+          with open("EnginePlugins/manifest.json") as f:
+              manifest = json.load(f)
+
+          for plugin in manifest["plugins"]:
+              name = plugin["name"]
+              plugin["version"] = tag
+              plugin["linux"]   = f"{base_url}/{name}.so"
+              plugin["windows"] = f"{base_url}/{name}.dll"
+
+          with open("EnginePlugins/manifest.json", "w") as f:
+              json.dump(manifest, f, indent=2)
+              f.write("\n")
+          EOF
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          BASE_URL: "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}"
+
+      - name: Commit updated manifest
+        working-directory: EnginePlugins
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git diff --cached --quiet || git commit -m "ci: update manifest for ${{ steps.version.outputs.tag }}"
+          git push
+
+      - name: Create / update GitHub Release with plugin binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: EnginePlugins ${{ steps.version.outputs.tag }}
+          files: artifacts/*.so
+          body: |
+            Engine plugins built from commit ${{ github.sha }}.
+            Install via the Velix editor Plugins → Marketplace tab.
