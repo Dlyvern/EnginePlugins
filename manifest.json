@@ -5,8 +5,8 @@
       "version": "latest",
       "description": "IK chains (FABRIK), Kalman-smoothed character movement, and motion matching.",
       "category": "engine",
-      "linux": "",
-      "windows": ""
+      "linux": "https://github.com/Dlyvern/EnginePlugins/releases/download/latest/AdvancedAnimationPlugin.so",
+      "windows": "https://github.com/Dlyvern/EnginePlugins/releases/download/latest/AdvancedAnimationPlugin.dll"
     },
     {
       "name": "TerrainPlugin",
