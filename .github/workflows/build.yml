@@ -31,6 +31,7 @@ jobs:
 
       - name: Symlink EnginePlugins into Velix source tree
         run: |
+          mkdir -p ${{ github.workspace }}/Velix/resources/plugins
           ln -sfn ${{ github.workspace }}/EnginePlugins \
             ${{ github.workspace }}/Velix/resources/plugins/EnginePlugins
 
