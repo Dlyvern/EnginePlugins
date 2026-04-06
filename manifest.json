@@ -1,6 +1,14 @@
 {
   "plugins": [
     {
+      "name": "AdvancedAnimationPlugin",
+      "version": "latest",
+      "description": "IK chains (FABRIK), Kalman-smoothed character movement, and motion matching.",
+      "category": "engine",
+      "linux": "",
+      "windows": ""
+    },
+    {
       "name": "TerrainPlugin",
       "version": "latest",
       "description": "Terrain sculpting, painting and spawning tools for the editor.",

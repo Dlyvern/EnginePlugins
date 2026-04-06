@@ -1,1 +1,2 @@
 add_subdirectory(TerrainPlugin)
+add_subdirectory(AdvancedAnimationPlugin)
